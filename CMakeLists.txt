@@ -12,5 +12,5 @@ target_link_options(wclap-js PUBLIC
 target_include_directories(wclap-js PUBLIC ${CMAKE_CURRENT_LIST_DIR}/cpp/)
 
 # Add `wclap-cpp` as a dependency
-add_subdirectory(modules/wclap-cpp)
+add_subdirectory(cpp/wclap-cpp)
 target_link_libraries(wclap-js PUBLIC wclap-cpp)

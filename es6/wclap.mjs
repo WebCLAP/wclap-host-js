@@ -1,4 +1,4 @@
-import {getWasi, startWasi} from "./wasi.mjs";
+import {getWasi, startWasi} from "./wasi/wasi.mjs";
 import getWclap from "./wclap-plugin.mjs";
 import generateForwardingWasm from "./generate-forwarding-wasm.mjs"
 

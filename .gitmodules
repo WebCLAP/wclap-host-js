@@ -1,3 +1,6 @@
 [submodule "cpp/wclap-cpp"]
 	path = cpp/wclap-cpp
 	url = https://github.com/WebCLAP/wclap-cpp.git
+[submodule "es6/wasi.wasm"]
+	path = es6/wasi
+	url = https://github.com/WebCLAP/wasi.wasm.git

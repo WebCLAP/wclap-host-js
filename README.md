@@ -12,7 +12,7 @@ It provides an `Instance` implementation (as defined in [`wclap-cpp`](https://gi
 
 It also provides a JavaScript library (ES6 module: `wclap-js/wclap.mjs`) which can load any WASM hosts written using the above C++ library, and handles the corresponding `WebAssembly` instances.
 
-The exported (async) functions are:
+All functions are asynchronous aside from `host.getWorkerData()` and the two `.initObj()` methods.  The top-level exported functions are:
 
 * `getHost()` / `getWclap()` - takes a URL and returns an "initialisation object" (including a compiled WebAssembly module) for the host or a WCLAP module
 * `startHost(initObj, ?hostImports, ?createWorker)` - takes the initialisation object and (if supported) a function to create new `Worker`s, and returns a Host.
@@ -42,6 +42,8 @@ This is the object returned from `host.startWclap()`.  It has the following prop
 
 ### `createWorker(host, threadData)`
 
-This function (supplied either when starting the host, or the Wclap) is called when the Wclap wants to start a new thread.  This doesn't contain any shared memory or modules, which means it can be passed back from the `AudioWorklet` (which is otherwise quite restricted).
+This function (supplied either when starting the host, or the Wclap) is called when the Wclap wants to start a new thread.  It must (synchronously) return a `true`-ish value if successful.
+
+The `threadData` doesn't contain any shared memory or modules, which means it can be passed back from the `AudioWorklet` (which is otherwise quite restricted).
 
 To get the data which should actually be passed to the new `Worker`, call `host.getWorkerData(threadData)`.  On the new `Worker`, this should be passed to `runThread()`.

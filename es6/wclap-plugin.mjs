@@ -66,19 +66,21 @@ export default async function getWclap(options) {
 	// If it's not WASM, assume it's a `.tar.gz`
 	let tarFiles = await expandTarGz(response);
 	for (let path in tarFiles) {
-		options.files[`${options.pluginPath}/${path}`] = tarFiles[path];
+		let normalizedPath = path.replace(/^(\.\/)+/, "");
+		options.files[`${options.pluginPath}/${normalizedPath}`] = tarFiles[path];
 	}
-	if (!options.files[wasmPath]) {
+	if (!options.files[wasmPath] || !options.files[wasmPath].byteLength) {
 		// Find first `module.wasm` in the bundle (in case it's not top-level)
 		for (let path in tarFiles) {
-			if (/\/module.wasm$/.test(key)) {
+			let normalizedPath = path.replace(/^(\.\/)+/, "");
+			if (/(^|\/)module\.wasm$/.test(normalizedPath)) {
 				console.error(`WCLAP bundle has WASM at ${path} instead of /module.wasm`);
-				wasmPath = `${options.pluginPath}/${path}`;
+				wasmPath = `${options.pluginPath}/${normalizedPath}`;
 				break;
 			}
 		}
 	}
-	if (!options.files[wasmPath]) {
+	if (!options.files[wasmPath] || !options.files[wasmPath].byteLength) {
 		throw Error("No `module.wasm` found in WCLAP bundle");
 	}
 

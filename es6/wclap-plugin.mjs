@@ -1,5 +1,8 @@
 import expandTarGz from "./targz.mjs"
 
+// Enough headroom for plug-ins without reserving multi-gigabyte shared heaps on mobile WebKit.
+export const maximumMemoryPages = 4096;
+
 function fnv1aHex(string) {
 	let fnv1a32 = 0x811c9dc5;
 	for (let i = 0; i < string.length; ++i) {
@@ -40,7 +43,7 @@ export default async function getWclap(options) {
 		if (ArrayBuffer.isView(bufferOrSize)) bufferOrSize = bufferOrSize.buffer;
 		let moduleSize = (typeof bufferOrSize == 'number' ? bufferOrSize : bufferOrSize.byteLength);
 		let modulePages = Math.max(Math.ceil(moduleSize/65536) || 4, 4);
-		options.memorySpec = {initial: modulePages, maximum: 32768, shared: true};
+		options.memorySpec = {initial: modulePages, maximum: maximumMemoryPages, shared: true};
 		// If we're cross-origin isolated, actually create this memory
 		if (globalThis.crossOriginIsolated) options.memory = new WebAssembly.Memory(options.memorySpec);
 	}

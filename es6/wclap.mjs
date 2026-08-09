@@ -1,9 +1,9 @@
 import {getWasi, startWasi} from "./wasi/wasi.mjs";
-import getWclap from "./wclap-plugin.mjs";
+import getWclap, {maximumMemoryPages} from "./wclap-plugin.mjs";
 import generateForwardingWasm from "./generate-forwarding-wasm.mjs"
 
 /* These exported functions should work for any Wasm32 host using the `wclap-js-instance` version of `Instance`.*/
-export {getHost, startHost, getWclap, runThread};
+export {getHost, startHost, getWclap, maximumMemoryPages, runThread};
 
 class WclapHost {
 	#config;
@@ -225,6 +225,12 @@ class WclapHost {
 			init64: instancePtr => {throw Error("64-bit WCLAP not supported (yet)")}
 		};
 		
+		if (globalThis.crossOriginIsolated && !config.wasi.memory) {
+			config.wasi = Object.assign({}, config.wasi, {
+				memory: new WebAssembly.Memory({initial: 8, maximum: maximumMemoryPages, shared: true}),
+				memorySpec: {initial: 8, maximum: maximumMemoryPages, shared: true},
+			});
+		}
 		let wasiPromise = startWasi(config.wasi);
 
 		this.ready = (async _ => {
@@ -236,7 +242,7 @@ class WclapHost {
 			WebAssembly.Module.imports(config.module).forEach(entry => {
 				if (entry.kind == 'memory') {
 					if (!importMemory) {
-						importMemory = new WebAssembly.Memory({initial: 2, maximum: 32768, shared: true});
+						importMemory = new WebAssembly.Memory({initial: 2, maximum: maximumMemoryPages, shared: true});
 						if (globalThis.crossOriginIsolated) config.memory = importMemory;
 					}
 					

@@ -1,7 +1,7 @@
 import expandTarGz from "./targz.mjs"
 
 // Enough headroom for plug-ins without reserving multi-gigabyte shared heaps on mobile WebKit.
-export const maximumMemoryPages = 1024;
+export const maximumMemoryPages = 4096;
 
 function fnv1aHex(string) {
 	let fnv1a32 = 0x811c9dc5;

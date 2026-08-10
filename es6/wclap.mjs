@@ -5,6 +5,8 @@ import generateForwardingWasm from "./generate-forwarding-wasm.mjs"
 /* These exported functions should work for any Wasm32 host using the `wclap-js-instance` version of `Instance`.*/
 export {getHost, startHost, getWclap, maximumMemoryPages, runThread};
 
+const maximumHostMemoryPages = 1024;
+
 class WclapHost {
 	#config;
 	#wasi;
@@ -227,8 +229,8 @@ class WclapHost {
 		
 		if (globalThis.crossOriginIsolated && !config.wasi.memory) {
 			config.wasi = Object.assign({}, config.wasi, {
-				memory: new WebAssembly.Memory({initial: 8, maximum: maximumMemoryPages, shared: true}),
-				memorySpec: {initial: 8, maximum: maximumMemoryPages, shared: true},
+				memory: new WebAssembly.Memory({initial: 8, maximum: maximumHostMemoryPages, shared: true}),
+				memorySpec: {initial: 8, maximum: maximumHostMemoryPages, shared: true},
 			});
 		}
 		let wasiPromise = startWasi(config.wasi);
@@ -242,7 +244,7 @@ class WclapHost {
 			WebAssembly.Module.imports(config.module).forEach(entry => {
 				if (entry.kind == 'memory') {
 					if (!importMemory) {
-						importMemory = new WebAssembly.Memory({initial: 2, maximum: maximumMemoryPages, shared: true});
+						importMemory = new WebAssembly.Memory({initial: 2, maximum: maximumHostMemoryPages, shared: true});
 						if (globalThis.crossOriginIsolated) config.memory = importMemory;
 					}
 					

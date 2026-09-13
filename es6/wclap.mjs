@@ -292,7 +292,7 @@ class WclapHost {
 			if (/^wasi/.test(entry.module)) needsWasi = true;
 			if (entry.kind == 'memory') {
 				if (!importMemory) {
-					if (globalThis.crossOriginIsolated) throw Error('imported memory not supplied');
+					if (globalThis.crossOriginIsolated && wclapInitObj.memorySpec?.shared) throw Error('imported memory not supplied');
 					importMemory = new WebAssembly.Memory(wclapInitObj.memorySpec);
 				}
 				if (!wclapImports[entry.module]) wclapImports[entry.module] = {};

@@ -40,7 +40,7 @@ export default async function getWclap(options) {
 		if (ArrayBuffer.isView(bufferOrSize)) bufferOrSize = bufferOrSize.buffer;
 		let moduleSize = (typeof bufferOrSize == 'number' ? bufferOrSize : bufferOrSize.byteLength);
 		let modulePages = Math.max(Math.ceil(moduleSize/65536) || 4, 4);
-		options.memorySpec = {initial: modulePages, maximum: 32768, shared: true};
+		options.memorySpec = {initial: modulePages, maximum: options.maximumMemoryPages ?? 32768, shared: true};
 		// If we're cross-origin isolated, actually create this memory
 		if (globalThis.crossOriginIsolated) options.memory = new WebAssembly.Memory(options.memorySpec);
 	}

@@ -1,4 +1,5 @@
 import expandTarGz from "./targz.mjs"
+import importedMemorySpec from "./wasm-memory.mjs"
 
 function fnv1aHex(string) {
 	let fnv1a32 = 0x811c9dc5;
@@ -12,12 +13,30 @@ function fnv1aHex(string) {
 export default async function getWclap(options) {
 	if (typeof options === 'string') options = {url: options};
 	options = Object.assign({}, options);
-	if (!options.pluginPath) options.pluginPath = "/plugin/" + fnv1aHex(options.url);
+	if (!options.pluginPath) options.pluginPath = "/plugin/" + fnv1aHex(options.url || "");
+	let maximumMemoryPages = options.maximumMemoryPages ?? 32768;
+
+	function configureMemory(spec) {
+		let memories = WebAssembly.Module.imports(options.module).filter(entry => entry.kind == 'memory');
+		if (!memories.length) return;
+		if (memories.length != 1) throw Error("WCLAP supports one imported memory");
+		if (!spec) throw Error("A precompiled WCLAP module requires memorySpec from getWclap()");
+
+		let maximum = Math.min(spec.maximum ?? maximumMemoryPages, maximumMemoryPages);
+		if (spec.initial > maximum)
+			throw new RangeError(`WCLAP memory minimum ${spec.initial} pages exceeds maximum ${maximum} pages`);
+
+		options.memorySpec = {...spec, maximum};
+		delete options.memory;
+		// Only shared memory can be passed between the main thread and AudioWorklet.
+		if (globalThis.crossOriginIsolated && spec.shared)
+			options.memory = new WebAssembly.Memory(options.memorySpec);
+	}
+
 	if (options.module && options.module instanceof WebAssembly.Module) {
-		// Make a distinct copy of the memory (if it exists)
-		if (options.memory) options.memory = new WebAssembly.Memory(options.memorySpec);
+		configureMemory(options.memorySpec);
 		// Distinct path suffix
-		options.pluginPath += "-copy-" + fnv1aHex(Date.now() + options.url + Math.random());
+		options.pluginPath += "-copy-" + fnv1aHex(Date.now() + (options.url || "") + Math.random());
 		return options;
 	}
 
@@ -29,37 +48,26 @@ export default async function getWclap(options) {
 		}
 	}
 
-	function guessMemorySize(bufferOrSize, module) {
-		let importsMemory = false;
-		WebAssembly.Module.imports(module).forEach(entry => {
-			if (entry.kind == 'memory') importsMemory = true;
-		});
-		if (!importsMemory) return;
-	
-		// We have to guess the imported memory size - as a heuristic, use the module size itself
-		if (ArrayBuffer.isView(bufferOrSize)) bufferOrSize = bufferOrSize.buffer;
-		let moduleSize = (typeof bufferOrSize == 'number' ? bufferOrSize : bufferOrSize.byteLength);
-		let modulePages = Math.max(Math.ceil(moduleSize/65536) || 4, 4);
-		options.memorySpec = {initial: modulePages, maximum: options.maximumMemoryPages ?? 32768, shared: true};
-		// If we're cross-origin isolated, actually create this memory
-		if (globalThis.crossOriginIsolated) options.memory = new WebAssembly.Memory(options.memorySpec);
-	}
-
 	let wasmPath = `${options.pluginPath}/module.wasm`;
 	options.module = options.module || options.files[wasmPath];
 	options.files[wasmPath] = new ArrayBuffer(0); // avoid self-parsing shenanigans
 
 	if (options.module && (options.module instanceof ArrayBuffer || ArrayBuffer.isView(options.module))) {
-		let buffer = options.module;
+		let buffer = ArrayBuffer.isView(options.module)
+			? new Uint8Array(options.module.buffer, options.module.byteOffset, options.module.byteLength)
+			: options.module;
 		options.module = await WebAssembly.compile(buffer);
-		guessMemorySize(buffer, module);
+		configureMemory(importedMemorySpec(buffer));
 		return options;
 	}
 
 	let response = await fetch(options.url);
 	if (response.headers.get("Content-Type") == "application/wasm") {
-		options.module = await WebAssembly.compileStreaming(response);
-		guessMemorySize(response.headers.get('Content-Length') || (1<<24), options.module);
+		let [module, buffer] = await Promise.all([
+			WebAssembly.compileStreaming(response.clone()), response.arrayBuffer()
+		]);
+		options.module = module;
+		configureMemory(importedMemorySpec(buffer));
 		return options;
 	}
 
@@ -85,7 +93,7 @@ export default async function getWclap(options) {
 	}
 
 	options.module = await WebAssembly.compile(options.files[wasmPath]);
-	guessMemorySize(options.files[wasmPath], options.module);
+	configureMemory(importedMemorySpec(options.files[wasmPath]));
 
 	return options;
 }

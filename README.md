@@ -18,6 +18,22 @@ All functions are asynchronous aside from `host.getWorkerData()` and the two `.i
 * `startHost(initObj, ?hostImports, ?createWorker)` - takes the initialisation object and (if supported) a function to create new `Worker`s, and returns a Host.
 * `runThread(threadData, hostImports, createWorker)` - to be called from any `Worker`s that you start
 
+### Plug-in memory
+
+`getWclap({url, maximumMemoryPages: 4096})` limits imported plug-in memory to
+4096 64 KiB pages (256 MiB).  If omitted, the host ceiling remains 32768 pages
+(2 GiB).
+
+The initial size comes from the Wasm import declaration.  The effective maximum
+is the smaller of the plug-in's declared maximum (when present) and the host
+ceiling configured by `maximumMemoryPages`.  A declared minimum above that
+ceiling rejects the load.
+
+Plug-in authors should declare realistic memory limits at build time.  The loader
+honors lower declared ceilings instead of assigning every plug-in a 2 GiB ceiling,
+which can improve portability in memory-constrained browser environments,
+including iOS.
+
 ![wclap-js architecture diagram](doc/wclap-js-outline.png)
 
 ### Host
